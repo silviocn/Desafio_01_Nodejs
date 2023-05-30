@@ -1,4 +1,6 @@
 const knex = require("../database/knex");
+const sqliteConnection = require("../database/sqlite");
+const AppError = require("../utils/AppError");
 
 class NotesController {
   async create (request, response){
@@ -35,6 +37,33 @@ class NotesController {
       ...note,
       tags
     });
+  }
+  
+  async update(request, response) {
+      const { title, description, rating } = request.body;
+      const { id } = request.params;
+  
+      const database = await sqliteConnection();
+      const note = await database.get("SELECT * FROM notes WHERE id = (?)", [id]);
+  
+      if(!note) {
+        throw new AppError("Couldn't find note.");
+      }
+  
+      note.title = title;
+      note.description = description;
+      note.rating = rating;
+  
+      await database.run(`
+        UPDATE notes SET 
+        title = ?, 
+        description = ?,
+        rating = ?
+        WHERE id = ?`,
+        [note.title, note.description, note.rating, id]     
+        );
+  
+        return response.json();
   }
 
   async delete(request, response){
